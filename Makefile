@@ -32,8 +32,6 @@ clean:
 
 .PHONY: requirement
 requirement:
-	echo "--extra-index-url https://ai-labs-devpi.mokahr.com/root/dev/+simple/" > requirements.txt
-	echo "--extra-index-url https://ai-labs-devpi.mokahr.com/root/dev/+simple/" > dev-requirements.txt
 	poetry export --without-hashes >> requirements.txt
 	poetry export --only dev --without-hashes >> dev-requirements.txt
 

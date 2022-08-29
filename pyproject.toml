@@ -19,9 +19,3 @@ pytest-cov = '3.0.0'
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
-[[tool.poetry.source]]
-name = "moka-dev"
-url = "https://ai-labs-devpi.mokahr.com/root/dev/+simple/"
-default = true
-secondary = false
