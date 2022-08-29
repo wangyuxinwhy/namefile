@@ -1,0 +1,11 @@
+image: 'python:3.8'
+test:
+  script:
+    - python -m pip install -i https://ai-labs-devpi.mokahr.com/root/dev/+simple/ -U pip
+    - python -m pip install -i https://ai-labs-devpi.mokahr.com/root/dev/+simple/ -r requirements.txt
+    - python -m pip install -i https://ai-labs-devpi.mokahr.com/root/dev/+simple/ -r dev-requirements.txt
+    - make style
+    - make lint
+    - make test
+  tags:
+    - k8s-runner

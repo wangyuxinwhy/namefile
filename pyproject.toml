@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "namefile"
+version = "0.1.0"
+description = "Pydantic to CLI"
+authors = ["wangyuxin <wangyuxin@mokahr.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "7.1.2"
+pyright = "^1.1.266"
+isort = "5.10.1"
+blue = "0.9.1"
+coverage = "6.3.2"
+pytest-cov = '3.0.0'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.source]]
+name = "moka-dev"
+url = "https://ai-labs-devpi.mokahr.com/root/dev/+simple/"
+default = true
+secondary = false
