@@ -3,58 +3,76 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional, TypeVar, Union
+from enum import Enum
+from typing import Any, Optional, Sequence, TypeVar, Union
+
+from packaging.version import LegacyVersion, Version
+from packaging.version import parse as version_parse
 
 T = TypeVar('T')
 _date_format = '%Y%m%d'
 _steam_pattern = r'(?P<stem>\w+)'
 _tag_pattern = r'(-(?P<tags>[\w-]+))?'
-_date_pattern = r'(\.(?P<date>\d{14}))?'
+_date_pattern = r'(\.(?P<date>\d{8}))?'
 _version_pattern = r'(\.(?P<version>v[\w\.]+))?'
 _suffix_pattern = r'\.(?P<suffix>\w+)'
 _invalid_stem_char = set('.- ')
 FileNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _version_pattern + _suffix_pattern)
 
 
+def sanitize_string(stem: str) -> str:
+    for c in _invalid_stem_char:
+        stem = stem.replace(c, '_')
+    return stem
+
+
+class VersionType(str, Enum):
+    major: int
+    minor: int
+    micro: int
+
+
 @dataclass
 class FileInfo:
     stem: str
     suffix: str
-    tags: list[str] = field(default_factory=list)
+    tags: Sequence[str] = field(default_factory=list)
     date: Optional[datetime] = None
-    version: Optional[str] = None
+    version: Optional[Version] = None
 
     def __post_init__(self):
-        self._check_stem(self.stem)
-        if self.suffix.startswith('.'):
-            raise ValueError('no')
-        self.tags = sorted(self.tags)
-        if self.date is True:
-            self.date = datetime.now()
+        self.stem = sanitize_string(self.stem)
+        if self.tags is None:
+            self.tags = []
+        elif isinstance(self.tags, str):
+            self.tags = [self.tags]
+        self.tags = sorted([sanitize_string(tag) for tag in self.tags])
 
-    def name(self):
-        suffix_string = '.' + self.suffix
+        if isinstance(self.version, str):
+            version = version_parse(self.version)
+            if isinstance(version, LegacyVersion):
+                raise ValueError('LegacyVersion is not supported')
+            self.version = version
+
+    def name(self) -> str:
+        suffix = '.' + self.suffix
 
         if self.tags:
-            tags_string = '-' + '-'.join(self.tags)
+            tags = '-' + '-'.join(self.tags)
         else:
-            tags_string = ''
+            tags = ''
 
         if self.version is None:
-            version_string = ''
+            version = ''
         else:
-            if not self.version.startswith('v'):
-                version_string = 'v' + self.version
-            else:
-                version_string = self.version
-            version_string = '.' + version_string
+            version = '.v' + str(self.version)
 
-        if self.date is not None :
-            date_string = '.' + self.date.strftime(_date_format)
+        if self.date is not None:
+            date = '.' + self.date.strftime(_date_format)
         else:
-            date_string = ''
+            date = ''
 
-        return f'{self.stem}{tags_string}{date_string}{version_string}{suffix_string}'
+        return f'{self.stem}{tags}{date}{version}{suffix}'
 
     @classmethod
     def parse(cls, file_name: str) -> FileInfo:
@@ -74,8 +92,34 @@ class FileInfo:
         file_info = cls(**match_dict)
         return file_info
 
-    @staticmethod
-    def _check_stem(stem: str) -> None:
-        for c in stem:
-            if c in _invalid_stem_char:
-                raise ValueError(f'Invalid stem: {stem}, contains invalid character -> {c}')
+    def add_tag(self, tag: str) -> None:
+        tags = list(self.tags)
+        self.tags = sorted([sanitize_string(tag) for tag in tags + [tag]])
+
+
+def namefile(
+    stem: str,
+    suffix: str,
+    tags: Optional[Union[str, Sequence[str]]] = None,
+    date: Optional[Union[bool, datetime]] = False,
+    version: Optional[str] = None,
+) -> str:
+    if isinstance(tags, str):
+        tags = [tags]
+    elif tags is None:
+        tags = []
+
+    if date is True:
+        date = datetime.now()
+    elif date is False:
+        date = None
+
+    _version = version_parse(version) if version is not None else None
+    if isinstance(_version, LegacyVersion):
+        raise ValueError('LegacyVersion is not supported')
+    file_info = FileInfo(stem, suffix, tags, date, _version)
+    return file_info.name()
+
+
+def parse(file_name: str) -> FileInfo:
+    return FileInfo.parse(file_name)
