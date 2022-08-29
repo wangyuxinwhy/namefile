@@ -41,7 +41,7 @@ push: style clean requirement
 
 .PHONY: publish
 publish: style clean requirement
-	poetry publish
+	poetry publish --build
 
 .PHONY: test
 test:

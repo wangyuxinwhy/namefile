@@ -14,10 +14,11 @@ _date_format = '%Y%m%d'
 _steam_pattern = r'(?P<stem>\w+)'
 _tag_pattern = r'(-(?P<tags>[\w-]+))?'
 _date_pattern = r'(\.(?P<date>\d{8}))?'
-_version_pattern = r'(\.(?P<version>v[\w\.]+))?'
+_version_pattern = r'(\.(?P<version>[\w\.]+)-v)?'
 _suffix_pattern = r'\.(?P<suffix>\w+)'
-_invalid_stem_char = set('.- ')
+_invalid_stem_char = set('.- /')
 FileNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _version_pattern + _suffix_pattern)
+DirNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _version_pattern)
 
 
 def sanitize_string(stem: str) -> str:
@@ -32,10 +33,10 @@ class VersionType(str, Enum):
     micro: int
 
 
-@dataclass
+@dataclass(repr=True)
 class FileInfo:
     stem: str
-    suffix: str
+    suffix: Optional[str] = None
     tags: set[str] = field(default_factory=set)
     date: Optional[datetime] = None
     version: Optional[Version] = None
@@ -54,8 +55,14 @@ class FileInfo:
                 raise ValueError('LegacyVersion is not supported')
             self.version = version
 
+    def __str__(self) -> str:
+        return self.name()
+
     def name(self) -> str:
-        suffix = '.' + self.suffix
+        if self.suffix is None:
+            suffix = ''
+        else:
+            suffix = '.' + self.suffix
 
         if self.tags:
             tags = '-' + '-'.join(sorted(list(self.tags)))
@@ -65,7 +72,7 @@ class FileInfo:
         if self.version is None:
             version = ''
         else:
-            version = '.v' + str(self.version)
+            version = '.' + str(self.version) + '-v'
 
         if self.date is not None:
             date = '.' + self.date.strftime(_date_format)
@@ -76,7 +83,12 @@ class FileInfo:
 
     @classmethod
     def parse(cls, file_name: str) -> FileInfo:
-        match = re.match(FileNamePattern, file_name)
+        if file_name.endswith('-v'):
+            match = re.match(DirNamePattern, file_name)
+        else:
+            match = re.match(FileNamePattern, file_name)
+            if match is None:
+                match = re.match(DirNamePattern, file_name)
         if match is None:
             raise ValueError(f'Invalid file name: {file_name}')
         match_dict: dict[str, Any] = match.groupdict()
@@ -92,10 +104,16 @@ class FileInfo:
         file_info = cls(**match_dict)
         return file_info
 
+    def is_file(self):
+        return self.suffix is not None
+
+    def is_dir(self):
+        return self.suffix is None
+
 
 def namefile(
     stem: str,
-    suffix: str,
+    suffix: Optional[str] = None,
     tags: Optional[Union[str, Sequence[str]]] = None,
     date: Optional[Union[bool, datetime]] = False,
     version: Optional[str] = None,
