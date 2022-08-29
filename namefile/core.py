@@ -36,17 +36,17 @@ class VersionType(str, Enum):
 class FileInfo:
     stem: str
     suffix: str
-    tags: Sequence[str] = field(default_factory=list)
+    tags: set[str] = field(default_factory=set)
     date: Optional[datetime] = None
     version: Optional[Version] = None
 
     def __post_init__(self):
         self.stem = sanitize_string(self.stem)
         if self.tags is None:
-            self.tags = []
+            self.tags = set()
         elif isinstance(self.tags, str):
-            self.tags = [self.tags]
-        self.tags = sorted([sanitize_string(tag) for tag in self.tags])
+            self.tags = set([self.tags])
+        self.tags = set([sanitize_string(tag) for tag in self.tags])
 
         if isinstance(self.version, str):
             version = version_parse(self.version)
@@ -58,7 +58,7 @@ class FileInfo:
         suffix = '.' + self.suffix
 
         if self.tags:
-            tags = '-' + '-'.join(self.tags)
+            tags = '-' + '-'.join(sorted(list(self.tags)))
         else:
             tags = ''
 
@@ -92,10 +92,6 @@ class FileInfo:
         file_info = cls(**match_dict)
         return file_info
 
-    def add_tag(self, tag: str) -> None:
-        tags = list(self.tags)
-        self.tags = sorted([sanitize_string(tag) for tag in tags + [tag]])
-
 
 def namefile(
     stem: str,
@@ -117,7 +113,7 @@ def namefile(
     _version = version_parse(version) if version is not None else None
     if isinstance(_version, LegacyVersion):
         raise ValueError('LegacyVersion is not supported')
-    file_info = FileInfo(stem, suffix, tags, date, _version)
+    file_info = FileInfo(stem, suffix, set(tags), date, _version)
     return file_info.name()
 
 

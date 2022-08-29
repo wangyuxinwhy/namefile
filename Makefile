@@ -32,8 +32,8 @@ clean:
 
 .PHONY: requirement
 requirement:
-	poetry export --without-hashes >> requirements.txt
-	poetry export --only dev --without-hashes >> dev-requirements.txt
+	poetry export --without-hashes > requirements.txt
+	poetry export --only dev --without-hashes > dev-requirements.txt
 
 .PHONY: push
 push: style clean requirement
@@ -41,7 +41,7 @@ push: style clean requirement
 
 .PHONY: publish
 publish: style clean requirement
-	poetry publish -r moka-dev --build
+	poetry publish
 
 .PHONY: test
 test:
