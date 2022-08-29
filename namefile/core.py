@@ -14,11 +14,12 @@ _date_format = '%Y%m%d'
 _steam_pattern = r'(?P<stem>\w+)'
 _tag_pattern = r'(-(?P<tags>[\w-]+))?'
 _date_pattern = r'(\.(?P<date>\d{8}))?'
-_version_pattern = r'(\.(?P<version>[\w\.]+)-v)?'
-_suffix_pattern = r'\.(?P<suffix>\w+)'
+_file_version_pattern = r'(\.(?P<version>[\w\.]+)-v)?'
+_dir_version_pattern = r'(\.(?P<version>[\w\.]+))?'
+_suffix_pattern = r'\.(?P<suffix>[a-z]+)'
 _invalid_stem_char = set('.- /')
-FileNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _version_pattern + _suffix_pattern)
-DirNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _version_pattern)
+FileNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _file_version_pattern + _suffix_pattern)
+DirNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _dir_version_pattern)
 
 
 def sanitize_string(stem: str) -> str:
@@ -72,7 +73,10 @@ class FileInfo:
         if self.version is None:
             version = ''
         else:
-            version = '.' + str(self.version) + '-v'
+            if self.is_file():
+                version = '.' + str(self.version) + '-v'
+            else:
+                version = '.' + str(self.version)
 
         if self.date is not None:
             date = '.' + self.date.strftime(_date_format)
@@ -83,12 +87,7 @@ class FileInfo:
 
     @classmethod
     def parse(cls, file_name: str) -> FileInfo:
-        if file_name.endswith('-v'):
-            match = re.match(DirNamePattern, file_name)
-        else:
-            match = re.match(FileNamePattern, file_name)
-            if match is None:
-                match = re.match(DirNamePattern, file_name)
+        match = re.match(FileNamePattern, file_name) or re.match(DirNamePattern, file_name)
         if match is None:
             raise ValueError(f'Invalid file name: {file_name}')
         match_dict: dict[str, Any] = match.groupdict()
@@ -131,7 +130,9 @@ def namefile(
     _version = version_parse(version) if version is not None else None
     if isinstance(_version, LegacyVersion):
         raise ValueError('LegacyVersion is not supported')
-    file_info = FileInfo(stem, suffix, set(tags), date, _version)
+
+    _suffix = suffix or None
+    file_info = FileInfo(stem, _suffix, set(tags), date, _version)
     return file_info.name()
 
 
