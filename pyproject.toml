@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "namefile"
-version = "0.3.1"
+version = "0.3.1.post0"
 description = "generate file name from file info"
 authors = ["wangyuxin <wangyuxin@mokahr.com>"]
 readme = "README.md"

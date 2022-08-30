@@ -11,15 +11,14 @@ from packaging.version import parse as version_parse
 
 T = TypeVar('T')
 _date_format = '%Y%m%d'
-_steam_pattern = r'(?P<stem>\w+)'
+_steam_pattern = r'^(?P<stem>\w+)'
 _tag_pattern = r'(-(?P<tags>[\w-]+))?'
 _date_pattern = r'(\.(?P<date>\d{8}))?'
-_file_version_pattern = r'(\.(?P<version>[\w\.]+)-v)?'
-_dir_version_pattern = r'(\.(?P<version>[\w\.]+))?'
-_suffix_pattern = r'\.(?P<suffix>[a-z]+)'
+_version_pattern = r'(\.(?P<version>[\w\.]+))?'
+_suffix_pattern = r'\.(?P<suffix>[a-z]+)$'
 _invalid_stem_char = set('.- /')
-FileNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _file_version_pattern + _suffix_pattern)
-DirNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _dir_version_pattern)
+FileNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _version_pattern + _suffix_pattern)
+DirNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _version_pattern)
 
 
 def sanitize_string(stem: str) -> str:
@@ -73,10 +72,7 @@ class FileInfo:
         if self.version is None:
             version = ''
         else:
-            if self.is_file():
-                version = '.' + str(self.version) + '-v'
-            else:
-                version = '.' + str(self.version)
+            version = '.' + str(self.version)
 
         if self.date is not None:
             date = '.' + self.date.strftime(_date_format)
