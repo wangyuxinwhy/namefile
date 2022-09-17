@@ -4,33 +4,27 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional, Sequence, TypeVar, Union
+from typing import Any, Iterable, Optional, Sequence, TypeVar, Union
 
 from packaging.version import LegacyVersion, Version
 from packaging.version import parse as version_parse
 
 T = TypeVar('T')
-_date_format = '%Y%m%d'
-_steam_pattern = r'^(?P<stem>\w+)'
-_tag_pattern = r'(-(?P<tags>[\w-]+))?'
-_date_pattern = r'(\.(?P<date>\d{8}))?'
-_version_pattern = r'(\.(?P<version>[\w\.]+))?'
-_suffix_pattern = r'\.(?P<suffix>[a-z]+)$'
-_invalid_stem_char = set('.- /')
-FileNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _version_pattern + _suffix_pattern)
-DirNamePattern = re.compile(_steam_pattern + _tag_pattern + _date_pattern + _version_pattern)
+DATE_FORMAT = '%Y%m%d'
+STEAM_PATTERN = r'^(?P<stem>\w+)'
+TAG_PATTERN = r'(-(?P<tags>[\w-]+))?'
+DATE_PATTERN = r'(\.(?P<date>\d{8}))?'
+VERSION_PATTERN = r'(\.(?P<version>[\w\.]+))?'
+SUFFIX_PATTERN = r'\.(?P<suffix>[a-z]+)$'
+INVALID_STEM_CHAR = set('.- /')
+FILE_NAME_PATTERN = re.compile(STEAM_PATTERN + TAG_PATTERN + DATE_PATTERN + VERSION_PATTERN + SUFFIX_PATTERN)
+DIR_NAME_PATTERN = re.compile(STEAM_PATTERN + TAG_PATTERN + DATE_PATTERN + VERSION_PATTERN)
 
 
-def sanitize_string(stem: str) -> str:
-    for c in _invalid_stem_char:
-        stem = stem.replace(c, '_')
+def sanitize_stem(stem: str) -> str:
+    for char in INVALID_STEM_CHAR:
+        stem = stem.replace(char, '_')
     return stem
-
-
-class VersionType(str, Enum):
-    major: int
-    minor: int
-    micro: int
 
 
 @dataclass(repr=True)
@@ -42,12 +36,12 @@ class FileInfo:
     version: Optional[Version] = None
 
     def __post_init__(self):
-        self.stem = sanitize_string(self.stem)
+        self.stem = sanitize_stem(self.stem)
         if self.tags is None:
             self.tags = set()
         elif isinstance(self.tags, str):
             self.tags = set([self.tags])
-        self.tags = set([sanitize_string(tag) for tag in self.tags])
+        self.tags = set([sanitize_stem(tag) for tag in self.tags])
 
         if isinstance(self.version, str):
             version = version_parse(self.version)
@@ -75,7 +69,7 @@ class FileInfo:
             version = '.' + str(self.version)
 
         if self.date is not None:
-            date = '.' + self.date.strftime(_date_format)
+            date = '.' + self.date.strftime(DATE_FORMAT)
         else:
             date = ''
 
@@ -83,7 +77,7 @@ class FileInfo:
 
     @classmethod
     def parse(cls, file_name: str) -> FileInfo:
-        match = re.match(FileNamePattern, file_name) or re.match(DirNamePattern, file_name)
+        match = re.match(FILE_NAME_PATTERN, file_name) or re.match(DIR_NAME_PATTERN, file_name)
         if match is None:
             raise ValueError(f'Invalid file name: {file_name}')
         match_dict: dict[str, Any] = match.groupdict()
@@ -94,7 +88,7 @@ class FileInfo:
             match_dict['tags'] = []
 
         if (date := match_dict['date']) is not None:
-            match_dict['date'] = datetime.strptime(date, _date_format)
+            match_dict['date'] = datetime.strptime(date, DATE_FORMAT)
 
         file_info = cls(**match_dict)
         return file_info
@@ -109,9 +103,9 @@ class FileInfo:
 def namefile(
     stem: str,
     suffix: Optional[str] = None,
-    tags: Optional[Union[str, Sequence[str]]] = None,
+    tags: Optional[Union[str, Iterable[str]]] = None,
     date: Optional[Union[bool, datetime]] = False,
-    version: Optional[str] = None,
+    version: Optional[Union[str, Version]] = None,
 ) -> str:
     if isinstance(tags, str):
         tags = [tags]
@@ -123,14 +117,16 @@ def namefile(
     elif date is False:
         date = None
 
-    _version = version_parse(version) if version is not None else None
-    if isinstance(_version, LegacyVersion):
-        raise ValueError('LegacyVersion is not supported')
+    if isinstance(version, str):
+        _version = version_parse(version)
+        if isinstance(_version, LegacyVersion):
+            raise ValueError('LegacyVersion is not supported')
+    else:
+        _version = version
 
-    _suffix = suffix or None
-    file_info = FileInfo(stem, _suffix, set(tags), date, _version)
+    file_info = FileInfo(stem, suffix, set(tags), date, _version)
     return file_info.name()
 
 
-def parse(file_name: str) -> FileInfo:
+def nameparse(file_name: str) -> FileInfo:
     return FileInfo.parse(file_name)

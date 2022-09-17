@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 from packaging.version import parse as version_parse
 
-from namefile.core import FileInfo, namefile, parse
+from namefile.core import FileInfo, namefile, nameparse
 
 
 @pytest.mark.parametrize(
@@ -23,7 +23,7 @@ def test_file_name(stem, suffix, tag, version, date):
     if suffix is not None:
         assert filename.endswith(suffix)
 
-    fileinfo1 = parse(filename)
+    fileinfo1 = nameparse(filename)
     if date is True:
         date = fileinfo1.date
     if date is False:
