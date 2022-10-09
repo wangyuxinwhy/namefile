@@ -1,25 +1,30 @@
-from datetime import datetime
-
-import pytest
+from __future__ import annotations
+import datetime
+from hypothesis import given, note
+from hypothesis import strategies as st
 from packaging.version import parse as version_parse
 
-from namefile.core import FileInfo, namefile, nameparse
-
-
-@pytest.mark.parametrize(
-    'stem, suffix, tag, version, date',
-    [
-        ('Moka.2', 'csv', ['error', 'predicted'], '1.2.0.post1', datetime(2012, 2, 23)),
-        ('Moka-1', 'csv', 'error', '1.0.1.post1', True),
-        ('Moka3', 'xlse', None, '2.0.1.post1', False),
-        ('company_name_match_short', 'json', None, '1.2.0.pre', datetime(2012, 2, 23)),
-        ('company_name_match_short', None, None, '1.2.0.post', datetime(2012, 2, 23)),
-        ('company_name_match_short', 'xlsx', None, '1.2.0.post', None),
-        ('company_name_match_short', 'csv', None, None, None),
-    ],
+from namefile.core import (
+    STEM_PATTERN,
+    VALID_SUFFIX_PATTERN,
+    VALID_TAG_PATTERN,
+    FileInfo,
+    namefile,
+    nameparse,
 )
-def test_file_name(stem, suffix, tag, version, date):
-    filename = namefile(stem, suffix, tag, date, version)
+
+tag_string_strategy = st.from_regex(VALID_TAG_PATTERN, fullmatch=True)
+
+
+@given(
+    stem=st.from_regex(STEM_PATTERN, fullmatch=True),
+    suffix=st.one_of(st.none(), st.from_regex(VALID_SUFFIX_PATTERN, fullmatch=True)),
+    tags=st.one_of(st.none(), tag_string_strategy, st.lists(tag_string_strategy, min_size=1)),
+    date=st.one_of(st.none(), st.booleans(), st.dates(min_value=datetime.date(2000, 1, 1)), st.datetimes(min_value=datetime.datetime(2000, 1, 1))),
+    version=st.one_of(st.none(), st.just('1.0.1.post1'), st.just('2.0')),
+)
+def test_file_name(stem, suffix, tags, date, version):
+    filename = namefile(stem, suffix, tags, date, version)
     if suffix is not None:
         assert filename.endswith(suffix)
 
@@ -31,12 +36,16 @@ def test_file_name(stem, suffix, tag, version, date):
 
     if not suffix:
         assert fileinfo1.suffix is None
+
     else:
         assert fileinfo1.suffix == suffix
 
-    if version:
-        assert fileinfo1.version == version_parse(version)
+    if version is not None:
+        assert fileinfo1.version == version_parse(str(version))
 
-    fileinfo2 = FileInfo(stem, suffix, tag, date, version)
+    fileinfo2 = FileInfo(stem, suffix, tags, date, version)   # type: ignore
+    note(f'{fileinfo1!r}')
+    note(f'{fileinfo2!r}')
+
     assert str(fileinfo1) == filename
     assert fileinfo1 == fileinfo2
