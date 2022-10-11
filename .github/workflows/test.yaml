@@ -27,3 +27,4 @@ jobs:
       - name: Test with pytest
         run: |
           make test
+          cd docs && make doctest

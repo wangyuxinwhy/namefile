@@ -17,6 +17,8 @@ blue = "0.9.1"
 coverage = "6.3.2"
 pytest-cov = '3.0.0'
 hypothesis = "^6.56.1"
+Sphinx = "^5.2.3"
+furo = "^2022.9.29"
 
 [build-system]
 requires = ["poetry-core"]
