@@ -23,6 +23,28 @@ DIR_NAME_PATTERN = re.compile(STEM_PATTERN + TAG_PATTERN + DATE_PATTERN + VERSIO
 
 
 def sanitize_stem(stem: str) -> str:
+    """Sanitize stem by replacing invalid characters with underscores.
+
+    invalid characters are: ``.`` ``-`` ``/`` and ``<space>``
+
+    Args:
+        stem(str): Stem to sanitize.
+
+    Returns:
+        str: Sanitized stem.
+
+    Example:
+        .. testsetup::
+
+            from namefile.core import sanitize_stem
+
+        .. doctest::
+
+            >>> sanitize_stem('foo/bar')
+            'foo_bar'
+            >>> sanitize_stem('foo-bar')
+            'foo_bar'
+    """
     for char in INVALID_STEM_CHAR:
         stem = stem.replace(char, '_')
     if not stem:
@@ -32,6 +54,39 @@ def sanitize_stem(stem: str) -> str:
 
 @dataclass(repr=True)
 class FileInfo:
+    """FileInfo ValueObj
+
+    we use this class to represent file meta info, such as stem, tags, date, version and suffix,
+    and we can call :meth:`name` to generate file name by this meta info.
+
+    Example:
+        .. testsetup:: FileInfo
+
+            import datetime
+
+            from packaging.version import Version
+
+            from namefile.core import FileInfo, namefile, nameparse
+
+        .. doctest:: FileInfo
+
+            >>> fileinfo = FileInfo('foo', 'txt', ['bar', 'baz'], datetime.date(2020, 1, 1), Version('1.0.0'))
+            >>> str(fileinfo)
+            'foo-bar-baz.20200101.1.0.0.txt'
+
+    Args:
+        stem(str): Stem of file, in :meth:`__post_init__`, it will be sanitized by :func:`sanitize_stem`.
+        suffix(str | None): Suffix of file.
+        tags(list[str]): Tags of file, in :meth:`__post_init__`, tags will be deduplicated and sorted.
+        date(datetime.date | None): Date of file.
+        version(packaging.version.Version | None): Version of file.
+
+    .. warning::
+
+        * :attr:`stem` must not be empty.
+        * :attr:`suffix` must be a valid suffix, which means it must be a string ends with a letter.
+    """
+
     stem: str
     suffix: None | str = None
     tags: list[str] = field(default_factory=list)
@@ -104,6 +159,33 @@ class FileInfo:
         return self.name()
 
     def name(self) -> str:
+        """Generate file name by this file info.
+
+        generate file name by :attr:`stem`, :attr:`tags`, :attr:`date`, :attr:`version` and :attr:`suffix`.
+        :meth:`__str__` is an alias of this method.
+
+        .. note::
+
+            * if :attr:`suffix` is None, it will return a directory name, otherwise it will return a file name.
+            * if :attr:`date` is not None, it will be formatted as ``%Y%m%d`` and add to file name.
+            * if :attr:`version` is not None, it will be formatted as ``str`` and add to file name.
+            * if :attr:`tags` is not empty, it will be joined by ``-`` and add to file name.
+
+        .. note::
+
+            this method **encode** all file meta info to a file name, and :meth:`parse` is the **decode** method.
+
+            ``FileInfo`` -(:meth:`name`)-> file name -(:meth:`parse`)-> ``FileInfo``
+
+        Example:
+            .. doctest:: FileInfo
+
+                >>> fileinfo = FileInfo('foo', 'txt', ['bar', 'baz'], datetime.date(2020, 1, 1), Version('1.0.0'))
+                >>> fileinfo.name()
+                'foo-bar-baz.20200101.1.0.0.txt'
+                >>> fileinfo.name() == str(fileinfo)
+                True
+        """
         if self.suffix is None:
             suffix = ''
         else:
@@ -128,6 +210,23 @@ class FileInfo:
 
     @classmethod
     def parse(cls, file_name: str) -> FileInfo:
+        """Parse file name to :class:`FileInfo`.
+
+        Example:
+            .. doctest:: FileInfo
+
+                >>> fileinfo = FileInfo.parse('foo-bar-baz.20200101.1.0.0.txt')
+                >>> fileinfo.stem
+                'foo'
+                >>> fileinfo.tags
+                ['bar', 'baz']
+
+        Args:
+            file_name(str): File name to parse.
+
+        Returns:
+            :class:`FileInfo`: Parsed file info.
+        """
         match = re.match(FILE_NAME_PATTERN, file_name) or re.match(DIR_NAME_PATTERN, file_name)
         if match is None:
             raise ValueError(f'Invalid file name: {file_name}')
@@ -158,9 +257,32 @@ def namefile(
     date: None | bool | datetime.date | datetime.datetime = False,
     version: None | str | Version = None,
 ) -> str:
+    """Helper function to generate file name by :class:`FileInfo`.
+
+    args are same as :class:`FileInfo`.
+
+    Example:
+        .. doctest:: FileInfo
+
+            >>> fileinfo = namefile('foo', 'txt', ['bar', 'baz'], datetime.date(2020, 1, 1), Version('1.0.0'))
+            >>> str(fileinfo)
+            'foo-bar-baz.20200101.1.0.0.txt'
+    """
+
     file_info = FileInfo(stem, suffix, tags, date, version)   # type: ignore
     return file_info.name()
 
 
 def nameparse(file_name: str) -> FileInfo:
+    """Helper function to parse file name to :class:`FileInfo`.
+
+    Example:
+        .. doctest:: FileInfo
+
+            >>> fileinfo = nameparse('foo-bar-baz.20200101.1.0.0.txt')
+            >>> fileinfo.stem
+            'foo'
+            >>> fileinfo.tags
+            ['bar', 'baz']
+    """
     return FileInfo.parse(file_name)

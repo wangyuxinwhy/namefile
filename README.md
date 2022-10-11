@@ -1,26 +1,37 @@
 # namefile
 
-## Install
+## 💾 Install
+
+you can install namefile with pip:
 
 ```bash
 pip install namefile
 ```
 
-## Usage
+## 👋 Usage
+
+1. generate file name from file info
 
 ```python
-from namefile import namefile, nameparse
+from namefile import namefile
 
-
-filename = namefile(
-    stem='glue-cola',
-    suffix='csv',
-    tags=('classification', 'processed'),
-    date=True,
-    version='1.2.0.post1'
+name = namefile(
+    stem='foo',
+    suffix='txt',
+    tags=['bar', 'baz'],
+    date=datetime.date(2020, 1, 1),
+    version=Version('1.0.0'),
 )
-# filename: 'glue_cola-classification-processed.20220917.1.2.0.post1.csv'
-fileinfo = nameparse(filename)
-# fileinfo: FileInfo(stem='glue_cola', suffix='csv', tags={'processed', 'classification'}, date=datetime.datetime(2022, 9, 17, 0, 0), version=<Version('1.2.0.post1')>)
-assert filename == fileinfo.name() == str(fileinfo)
+print(str(name))
+# foo-bar-baz.20200101.1.0.0.txt
+```
+
+2. restore file info from file name
+
+```python
+from namefile import nameparse
+
+info = nameparse('foo-bar-baz.20200101.1.0.0.txt')
+print(repr(info))
+# FileInfo(stem='foo', suffix='txt', tags=['bar', 'baz'], date=datetime.date(2020, 1, 1), version=<Version('1.0.0')>)
 ```
