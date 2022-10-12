@@ -1,6 +1,6 @@
 # namefile
 
-[![](https://readthedocs.org/projects/docs/badge/)](https://namefile.readthedocs.io/) ![](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue) ![](https://img.shields.io/pypi/v/namefile)
+[![Documentation Status](https://readthedocs.org/projects/namefile/badge/?version=latest)](https://namefile.readthedocs.io/en/latest/?badge=latest) ![](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue) ![](https://img.shields.io/pypi/v/namefile)
 
 ## 💾 Install
 
